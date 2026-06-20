@@ -11,6 +11,11 @@ REPORT_COLUMNS = [
     "classification",
     "severity",
     "risk_score",
+    "hybrid_decision",
+    "ml_prediction",
+    "ml_prediction_label",
+    "ml_attack_probability",
+    "ml_model_used",
     "connection_count",
     "unique_dstip_count",
     "unique_dsport_count",
@@ -42,7 +47,13 @@ def print_console_summary(results: pd.DataFrame, output_path: str | Path) -> Non
     top_rows = results.head(10)
     for row in top_rows.to_dict("records"):
         identity = row.get("srcip", row.get("record_id", "unknown"))
+        ml_summary = ""
+        if "ml_attack_probability" in row:
+            ml_summary = (
+                f"; ML={row.get('ml_prediction_label', 'Unknown')} "
+                f"({float(row['ml_attack_probability']):.2%})"
+            )
         print(
             f"- {identity}: {row['classification']} "
-            f"({row['severity']}, score {row['risk_score']}) - {row['reason']}"
+            f"({row['severity']}, score {row['risk_score']}){ml_summary} - {row['reason']}"
         )

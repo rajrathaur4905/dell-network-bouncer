@@ -2,10 +2,10 @@
 
 Network Bouncer is a Python-based cybersecurity analytics tool that detects suspicious scan-like behavior in network traffic data. It was built for the Dell hackathon use case of identifying machines that contact many destinations, try many ports, or show abnormal connection patterns.
 
-The current implementation provides a working command-line pipeline:
+The current implementation provides a working hybrid command-line pipeline:
 
 ```text
-CSV input -> CSV parser -> behavior features -> explainable detection rules -> CSV report
+CSV input -> CSV parser -> behavior features -> rule-based detection -> optional ML scoring -> CSV report
 ```
 
 ## Problem Statement
@@ -27,6 +27,7 @@ Network Bouncer helps analysts answer:
 - Also supports raw network logs when `srcip`, `dstip`, and `dsport` columns are available.
 - Computes behavior indicators for destination diversity, port diversity, connection volume, and repeated source-destination behavior.
 - Applies explainable rule-based detection.
+- Adds optional ML attack predictions from a trained stacking ensemble.
 - Produces classification, severity, risk score, and human-readable reason.
 - Exports suspicious activity to a CSV report.
 - Includes tests for parser, feature engineering, detection, and reporting modules.
@@ -61,6 +62,7 @@ dell-network-bouncer/
 |   |   +-- host_features.py
 |   +-- detection/
 |   |   +-- rules.py
+|   |   +-- ml_model.py
 |   |   +-- models/
 |   +-- reporting/
 |   |   +-- report_writer.py
@@ -134,6 +136,18 @@ Include normal rows in the report:
 python main.py --include-normal
 ```
 
+Run hybrid rule-based and ML detection:
+
+```powershell
+python main.py --use-ml
+```
+
+Run hybrid detection with explicit model and encoding-reference paths:
+
+```powershell
+python main.py --use-ml --model-path models/network_bouncer_model.pkl --encoding-reference "data/cleaned/UNSW_NB15_training-set(in).csv"
+```
+
 Show CLI help:
 
 ```powershell
@@ -154,6 +168,9 @@ Report columns include:
 - `classification`: `Normal`, `Watch`, `Suspicious`, or `High Risk`.
 - `severity`: `Low`, `Medium`, or `High`.
 - `risk_score`: score from 0 to 100.
+- `ml_prediction`: ML output, where `0` is normal and `1` is attack.
+- `ml_attack_probability`: the model's estimated probability of an attack.
+- `hybrid_decision`: whether the rules and ML model agree, or whether one signal raised the alert.
 - `connection_count`.
 - `unique_dstip_count`.
 - `unique_dsport_count`.
@@ -168,7 +185,7 @@ High destination diversity: 59 destinations; High port diversity: 59 destination
 
 ## Detection Approach
 
-Network Bouncer uses explainable rule-based detection as the core method. This was chosen because security analysts and hackathon judges need to understand why a host or row was flagged.
+Network Bouncer uses a hybrid detection strategy. Rule-based detection is the primary explainable layer, and the trained ML model supplies an additional prediction and attack probability when `--use-ml` is enabled.
 
 The detector scores activity using:
 
@@ -187,6 +204,18 @@ Higher scores produce stronger classifications:
 70-100 -> High Risk
 ```
 
+### ML Scoring
+
+The included `network_bouncer_model.pkl` is a stacking classifier built with XGBoost, LightGBM, CatBoost, and logistic regression. It expects 42 UNSW-NB15 features, including `dur`, `proto`, `service`, `state`, traffic statistics, and derived connection-count fields.
+
+For consistent ML scoring, categorical values are encoded using the included UNSW training CSV by default:
+
+```text
+data/cleaned/UNSW_NB15_training-set(in).csv
+```
+
+The model is intended for compatible cleaned UNSW-NB15 inputs. Raw logs that only contain `srcip`, `dstip`, and `dsport` can still use rule-based detection, but do not contain enough columns for this ML model.
+
 ## Testing
 
 Install dependencies first, then run:
@@ -200,6 +229,7 @@ The tests cover:
 - CSV loading and validation.
 - Raw source-IP feature aggregation.
 - Suspicious activity classification.
+- Optional ML model scoring and hybrid decisions.
 - CSV report writing.
 
 If `pytest` is not found, run:

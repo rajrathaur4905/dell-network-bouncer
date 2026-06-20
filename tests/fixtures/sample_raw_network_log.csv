@@ -1,0 +1,9 @@
+srcip,dstip,dsport,proto,service,state,label
+10.0.0.1,192.168.1.1,80,tcp,http,FIN,0
+10.0.0.1,192.168.1.2,443,tcp,https,FIN,0
+10.0.0.2,192.168.1.3,20,tcp,-,REJ,1
+10.0.0.2,192.168.1.4,21,tcp,ftp,REJ,1
+10.0.0.2,192.168.1.5,22,tcp,ssh,REJ,1
+10.0.0.2,192.168.1.6,23,tcp,telnet,REJ,1
+10.0.0.2,192.168.1.7,25,tcp,smtp,REJ,1
+10.0.0.2,192.168.1.8,53,udp,dns,REJ,1

@@ -14,6 +14,7 @@ os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
 CATEGORICAL_COLUMNS = ("proto", "service", "state")
 DEFAULT_MODEL_PATH = Path("models/network_bouncer_model.pkl")
 DEFAULT_ENCODING_REFERENCE = Path("data/cleaned/UNSW_NB15_training-set(in).csv")
+DEFAULT_ATTACK_PROBABILITY_THRESHOLD = 0.65
 
 
 class MlModelError(RuntimeError):
@@ -24,26 +25,18 @@ def score_with_model(
     df: pd.DataFrame,
     model_path: str | Path = DEFAULT_MODEL_PATH,
     encoding_reference: str | Path | None = DEFAULT_ENCODING_REFERENCE,
+    attack_probability_threshold: float = DEFAULT_ATTACK_PROBABILITY_THRESHOLD,
 ) -> pd.DataFrame:
+    if not 0 <= attack_probability_threshold <= 1:
+        raise MlModelError("ML attack-probability threshold must be between 0 and 1")
+
     model = _load_model(model_path)
     feature_names = _get_feature_names(model)
     category_mappings = _load_category_mappings(encoding_reference)
     model_input = _prepare_model_input(df, feature_names, category_mappings)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        try:
-            predictions = model.predict(model_input)
-        except Exception as exc:
-            raise MlModelError(f"model prediction failed: {exc}") from exc
-
     scores = pd.DataFrame(index=df.index)
     scores["record_id"] = df["id"] if "id" in df.columns else df.index + 1
-    scores["ml_prediction"] = predictions
-    scores["ml_prediction_label"] = scores["ml_prediction"].map({0: "Normal", 1: "Attack"}).fillna(
-        scores["ml_prediction"].astype(str)
-    )
-    scores["ml_model_used"] = Path(model_path).name
 
     if hasattr(model, "predict_proba"):
         with warnings.catch_warnings():
@@ -52,9 +45,26 @@ def score_with_model(
                 probabilities = model.predict_proba(model_input)
                 class_index = _attack_class_index(model)
                 probability_frame = pd.DataFrame(probabilities)
-                scores["ml_attack_probability"] = probability_frame.iloc[:, class_index].round(4).to_numpy()
+                attack_probabilities = probability_frame.iloc[:, class_index]
+                scores["ml_attack_probability"] = attack_probabilities.round(4).to_numpy()
+                # Keep runtime decisions aligned with the threshold used to evaluate
+                # this model in the training notebook.
+                predictions = (attack_probabilities > attack_probability_threshold).astype(int)
             except Exception as exc:
                 raise MlModelError(f"model probability scoring failed: {exc}") from exc
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                predictions = model.predict(model_input)
+            except Exception as exc:
+                raise MlModelError(f"model prediction failed: {exc}") from exc
+
+    scores["ml_prediction"] = predictions
+    scores["ml_prediction_label"] = scores["ml_prediction"].map({0: "Normal", 1: "Attack"}).fillna(
+        scores["ml_prediction"].astype(str)
+    )
+    scores["ml_model_used"] = Path(model_path).name
 
     return scores
 

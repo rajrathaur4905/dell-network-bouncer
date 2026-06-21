@@ -30,6 +30,8 @@ ENV/
 
 # Logs and local runtime files
 *.log
+*.tmp
+*.bak
 
 # IDE and OS files
 .vscode/
@@ -40,10 +42,21 @@ Thumbs.db
 # Generated project outputs
 data/processed/
 screenshots/
+exports/
+reports/
 
 # Large or local raw datasets can be added manually when needed.
 # Keep data/cleaned/ and data/schema/ trackable for the hackathon demo.
 data/raw/
 
+# Keep the canonical trained model in models/.
+# Avoid accidentally committing duplicate local model copies under source code.
+src/detection/models/*.pkl
+src/detection/models/*.joblib
+
 # Notebook checkpoints
 .ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Local Streamlit runtime state
+.streamlit/cache/

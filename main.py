@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from src.detection.ml_model import (
+    DEFAULT_ATTACK_PROBABILITY_THRESHOLD,
     DEFAULT_ENCODING_REFERENCE,
     DEFAULT_MODEL_PATH,
     MlModelError,
@@ -80,6 +81,15 @@ def parse_args() -> argparse.Namespace:
             f"Defaults to {DEFAULT_ENCODING_REFERENCE}."
         ),
     )
+    parser.add_argument(
+        "--ml-threshold",
+        type=float,
+        default=DEFAULT_ATTACK_PROBABILITY_THRESHOLD,
+        help=(
+            "Attack-probability threshold used for ML predictions. "
+            f"Defaults to {DEFAULT_ATTACK_PROBABILITY_THRESHOLD}, matching the training notebook."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -104,7 +114,12 @@ def main() -> int:
         features = build_behavior_features(rows)
         results = detect_suspicious_activity(features, thresholds)
         if args.use_ml:
-            ml_scores = score_with_model(rows, args.model_path, args.encoding_reference)
+            ml_scores = score_with_model(
+                rows,
+                args.model_path,
+                args.encoding_reference,
+                args.ml_threshold,
+            )
             if "record_id" in results.columns:
                 results = results.merge(ml_scores, on="record_id", how="left")
             else:

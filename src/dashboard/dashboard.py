@@ -3,6 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
+from src.dashboard.report_processing import (
+    apply_severity_filter,
+    normalize_report,
+    summarize_report,
+)
+
 st.set_page_config(page_title="Network Bouncer", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -36,47 +42,37 @@ with st.sidebar:
     st.markdown("### 🔧 Filter Options")
     severity_filter = st.multiselect(
         "Filter by Severity",
-        options=["CRITICAL", "HIGH", "MEDIUM", "LOW"],
-        default=["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+        options=["HIGH", "MEDIUM", "LOW"],
+        default=["HIGH", "MEDIUM", "LOW"]
     )
     st.markdown("---")
     st.markdown("<span style='color:#8b949e; font-size:0.75rem;'>Network Bouncer v1.0<br>Dell Hackathon 2025</span>", unsafe_allow_html=True)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 if uploaded:
-    df = pd.read_csv(uploaded)
-    # Normalize text columns — works for any case (HIGH/high/High)
-    if "classification" in df.columns:
-        df["classification"] = df["classification"].str.strip()
-    if "severity" in df.columns:
-        df["severity_upper"] = df["severity"].str.strip().str.upper()
+    df = normalize_report(pd.read_csv(uploaded))
     st.success(f"✅ Loaded `{uploaded.name}` — {len(df)} records")
 else:
     st.warning("⬅️ Upload your suspicious_activity_report.csv from the sidebar.")
     st.stop()
 
 # ── Apply severity filter (case-insensitive) ──────────────────────────────────
-if "severity_upper" in df.columns and severity_filter:
-    df = df[df["severity_upper"].isin([s.upper() for s in severity_filter])]
+df = apply_severity_filter(df, severity_filter)
 
 # ── Split suspicious vs normal (case-insensitive) ─────────────────────────────
-NORMAL_LABELS = ["normal"]
-is_normal = df["classification"].str.strip().str.lower().isin(NORMAL_LABELS)
-suspicious_df = df[~is_normal]
-normal_df = df[is_normal]
-critical_count = len(df[df["severity_upper"] == "CRITICAL"]) if "severity_upper" in df.columns else 0
-high_count = len(df[df["severity_upper"] == "HIGH"]) if "severity_upper" in df.columns else 0
+summary = summarize_report(df)
+suspicious_df = summary.suspicious_df
 
 # ── KPI Cards ─────────────────────────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.markdown(f"<div class='metric-card blue'><div class='metric-value'>{len(df)}</div><div class='metric-label'>Total Records</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card blue'><div class='metric-value'>{summary.total_alerts}</div><div class='metric-label'>Total Alerts</div></div>", unsafe_allow_html=True)
 with c2:
-    st.markdown(f"<div class='metric-card red'><div class='metric-value'>{len(suspicious_df)}</div><div class='metric-label'>🔴 Suspicious</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card red'><div class='metric-value'>{summary.high_risk_count}</div><div class='metric-label'>High Risk</div></div>", unsafe_allow_html=True)
 with c3:
-    st.markdown(f"<div class='metric-card yellow'><div class='metric-value'>{high_count}</div><div class='metric-label'>⚠️ High Severity</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card yellow'><div class='metric-value'>{summary.suspicious_count}</div><div class='metric-label'>Suspicious</div></div>", unsafe_allow_html=True)
 with c4:
-    st.markdown(f"<div class='metric-card green'><div class='metric-value'>{len(normal_df)}</div><div class='metric-label'>🟢 Normal</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='metric-card green'><div class='metric-value'>{summary.watch_count}</div><div class='metric-label'>Watch</div></div>", unsafe_allow_html=True)
 
 # ── Suspicious Table ───────────────────────────────────────────────────────────
 st.markdown("<div class='section-title'>🚨 Suspicious Activity Log</div>", unsafe_allow_html=True)
@@ -90,7 +86,7 @@ if not suspicious_df.empty:
     show_df = suspicious_df[display_cols]
     if "risk_score" in show_df.columns:
         show_df = show_df.sort_values("risk_score", ascending=False)
-    st.dataframe(show_df, use_container_width=True, hide_index=True)
+    st.dataframe(show_df, width="stretch", hide_index=True)
 else:
     st.success("✅ No suspicious activity found.")
 

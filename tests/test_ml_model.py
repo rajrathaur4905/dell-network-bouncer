@@ -35,6 +35,29 @@ def test_score_with_model_adds_ml_columns(tmp_path):
     assert "ml_attack_probability" in scores.columns
 
 
+def test_score_with_model_uses_the_configured_probability_threshold(tmp_path):
+    model_path = tmp_path / "fake_model.pkl"
+    joblib.dump(FakeModel(), model_path)
+    df = pd.DataFrame(
+        {
+            "dur": [2.0],
+            "proto": ["tcp"],
+            "service": ["http"],
+            "state": ["FIN"],
+        }
+    )
+
+    scores = score_with_model(
+        df,
+        model_path,
+        encoding_reference=None,
+        attack_probability_threshold=0.85,
+    )
+
+    assert scores.iloc[0]["ml_attack_probability"] == 0.8
+    assert scores.iloc[0]["ml_prediction"] == 0
+
+
 def test_add_hybrid_decision_marks_confirmed_alert():
     results = pd.DataFrame(
         {

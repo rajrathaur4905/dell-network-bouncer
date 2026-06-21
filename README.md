@@ -273,20 +273,6 @@ If `pytest` is not found, run:
 pip install -r requirements.txt
 ```
 
-## Git Ignore Policy
-
-The repository keeps source code, tests, cleaned demo data, schema files, the training notebook, and the canonical trained model.
-
-The repository ignores:
-
-- Python cache/build/test artifacts.
-- Virtual environments.
-- Local `.env` files and Streamlit secrets.
-- Generated reports in `data/processed/`.
-- Local raw datasets in `data/raw/`.
-- Notebook checkpoints.
-- Duplicate local model files under `src/detection/models/`.
-
 ## Team
 
 | Name            | Role        |

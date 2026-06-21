@@ -3,11 +3,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from src.dashboard.report_processing import (
-    apply_severity_filter,
-    normalize_report,
-    summarize_report,
-)
+try:
+    from src.dashboard.report_processing import (
+        apply_severity_filter,
+        normalize_report,
+        summarize_report,
+    )
+except ModuleNotFoundError:
+    from report_processing import (
+        apply_severity_filter,
+        normalize_report,
+        summarize_report,
+    )
 
 st.set_page_config(page_title="Network Bouncer", page_icon="🛡️", layout="wide")
 

@@ -2,7 +2,7 @@
 
 Network Bouncer is a Python cybersecurity analytics tool for detecting suspicious scan-like behavior in network traffic. It was built for the Dell hackathon use case of finding hosts or records that contact many destinations, try many ports, or show abnormal connection patterns.
 
-Current pipeline:
+Pipeline:
 
 ```text
 CSV input -> CSV parser -> behavior features -> rule-based detection -> optional ML scoring -> CSV report -> optional dashboard
@@ -34,11 +34,19 @@ dell-network-bouncer/
 |   +-- processed/              # generated reports, ignored by git
 |   +-- schema/
 |       +-- NUSW-NB15_features(in).csv
+|
 +-- docs/                       # project PDFs and documentation assets
 +-- models/
 |   +-- network_bouncer_model.pkl
 +-- notebooks/
 |   +-- Detecting_suspicious_port_scanning.ipynb
+|
++-- screenshots/
+|   +-- dashboard_img_1.png
+|   +-- dashboard_img_2.png
+|   +-- dashboard_img_3.png
+|   +-- dashboard_img_4.png
+|
 +-- src/
 |   +-- parser/
 |   |   +-- csv_parser.py
@@ -53,6 +61,7 @@ dell-network-bouncer/
 |       +-- __init__.py
 |       +-- dashboard.py
 |       +-- report_processing.py
+|
 +-- tests/
     +-- fixtures/
     +-- test_parser.py
@@ -98,13 +107,6 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-If PowerShell blocks virtual environment activation:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
 ```
 
 The currently pinned dependency versions are:

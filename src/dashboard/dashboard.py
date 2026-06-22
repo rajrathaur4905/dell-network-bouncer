@@ -53,7 +53,7 @@ with st.sidebar:
         default=["HIGH", "MEDIUM", "LOW"]
     )
     st.markdown("---")
-    st.markdown("<span style='color:#8b949e; font-size:0.75rem;'>Network Bouncer v1.0<br>Dell Hackathon 2025</span>", unsafe_allow_html=True)
+    st.markdown("<span style='color:#8b949e; font-size:0.75rem;'>Network Bouncer v1.0<br>Dell Hackathon 2026</span>", unsafe_allow_html=True)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 if uploaded:
@@ -86,7 +86,8 @@ st.markdown("<div class='section-title'>🚨 Suspicious Activity Log</div>", uns
 display_cols = [c for c in [
     "srcip", "record_id", "classification", "severity",
     "risk_score", "connection_count", "unique_dstip_count",
-    "unique_dsport_count", "ml_prediction_label", "ml_attack_probability", "reason"
+    "unique_dsport_count", "dur", "rate",
+    "ml_prediction_label", "ml_attack_probability", "reason"
 ] if c in df.columns]
 
 if not suspicious_df.empty:
@@ -210,6 +211,6 @@ with d2:
 st.markdown("""
 <hr style='border-color:#21262d; margin-top:32px;'>
 <div style='text-align:center; color:#8b949e; font-size:0.75rem; font-family:monospace;'>
-    NETWORK BOUNCER — Dell Hackathon 2025
+    NETWORK BOUNCER — Dell Hackathon 2026
 </div>
 """, unsafe_allow_html=True)

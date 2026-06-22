@@ -13,7 +13,8 @@ CSV input -> CSV parser -> behavior features -> rule-based detection -> optional
 - Reads cleaned UNSW-NB15-style CSV traffic data.
 - Also supports raw network logs when `srcip`, `dstip`, and `dsport` are available.
 - Computes behavior indicators for destination diversity, port diversity, connection volume, and repeated source-destination behavior.
-- Applies explainable rule-based detection.
+- Performs **time-window analysis** to detect rapid scanning — flags connections with high activity packed into very short durations.
+- Applies explainable rule-based detection with human-readable reasons.
 - Optionally adds ML attack predictions from the trained model in `models/network_bouncer_model.pkl`.
 - Writes a suspicious activity CSV report.
 - Provides a Streamlit dashboard for report review.
@@ -102,7 +103,7 @@ Because the cleaned files do not include real source IP addresses, Network Bounc
 From the project folder:
 
 ```powershell
-cd "C:\Users\Acer\Desktop\Dell Hackathon\dell-network-bouncer"
+cd <project-directory>
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -144,6 +145,15 @@ Tune rule-based thresholds:
 ```powershell
 python main.py --dst-threshold 50 --port-threshold 30 --connection-threshold 100
 ```
+
+Tune time-window detection sensitivity:
+
+```powershell
+python main.py --short-duration-threshold 0.05 --high-rate-threshold 200
+```
+
+- `--short-duration-threshold`: Duration in seconds below which a connection is considered suspiciously short (default `0.1`).
+- `--high-rate-threshold`: Packet rate (pkts/sec) above which activity is flagged (default `100`).
 
 Include normal rows in the report:
 
@@ -192,8 +202,9 @@ Console output summarizes suspicious activity and points to the generated report
 - `connection_count`.
 - `unique_dstip_count`.
 - `unique_dsport_count`.
+- `dur`, `rate`, `is_short_duration`, `connections_per_second`: time-window features.
 - `attack_cat` and `label`, when available.
-- `reason`: explanation of why the record or host was flagged.
+- `reason`: explanation of why the record or host was flagged (includes time-window context such as `"Rapid scan: 59 destinations in 0.000007s duration"`).
 - `ml_prediction`, `ml_prediction_label`, `ml_attack_probability`, and `hybrid_decision` when `--use-ml` is enabled.
 
 ## Dashboard
@@ -221,13 +232,15 @@ Dashboard behavior:
 
 Network Bouncer uses a hybrid detection strategy. Rule-based detection is the primary explainable layer, and the trained ML model supplies an additional prediction and attack probability when `--use-ml` is enabled.
 
-The detector scores activity using:
+The detector scores activity using seven dimensions:
 
 - Connection volume.
 - Destination diversity.
 - Destination-port diversity.
 - Repeated source-destination behavior.
 - Unusual state/TTL patterns.
+- **Time-window rapid scan** — short-duration connections combined with high destination or port diversity (e.g., 59 destinations contacted in 0.000007 seconds).
+- **High packet rate** — abnormally high packets-per-second indicating automated probing.
 
 Higher scores produce stronger classifications:
 
@@ -265,6 +278,7 @@ Current tests cover:
 - CSV loading and validation.
 - Raw source-IP feature aggregation.
 - Suspicious activity classification.
+- Time-window detection scoring (raw host and UNSW record-level).
 - Optional ML model scoring and hybrid decisions.
 - CSV report writing.
 - Dashboard report filtering and summary behavior.
@@ -277,13 +291,13 @@ pip install -r requirements.txt
 
 ## Team
 
-| Name            | Role        |
-| --------------- | ----------- |
-| Raj Rathaur     | Team Lead   |
-| Anjali Kumari   | Team Member |
-| Vanshika Dixit  | Team Member |
-| Sonam Sharma    | Team Member |
-| Prashant Sharma | Team Member |
+| Name            | Role                                               |
+| --------------- | -------------------------------------------------- |
+| Raj Rathaur     | Team Lead & Project Manager & Backend Development  |
+| Anjali Kumari   | Detection Logic & ML & Documentation               |
+| Vanshika Dixit  | Feature Engineering                                |
+| Sonam Sharma    | Dataset Analysis/Research & Testing                |
+| Prashant Sharma | Dashboard Development                              |
 
 ## License
 

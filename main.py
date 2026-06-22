@@ -64,6 +64,18 @@ def parse_args() -> argparse.Namespace:
         help="Include normal records or hosts in the output report.",
     )
     parser.add_argument(
+        "--short-duration-threshold",
+        type=float,
+        default=0.1,
+        help="Duration in seconds below which a connection is considered suspiciously short. Defaults to 0.1.",
+    )
+    parser.add_argument(
+        "--high-rate-threshold",
+        type=float,
+        default=100.0,
+        help="Packet rate (pkts/sec) threshold above which activity is considered suspicious. Defaults to 100.",
+    )
+    parser.add_argument(
         "--use-ml",
         action="store_true",
         help="Add predictions from the trained ML model to the report.",
@@ -107,6 +119,8 @@ def main() -> int:
         destination_count=args.dst_threshold,
         port_count=args.port_threshold,
         connection_count=args.connection_threshold,
+        short_duration_threshold=args.short_duration_threshold,
+        high_rate_threshold=args.high_rate_threshold,
     )
 
     try:

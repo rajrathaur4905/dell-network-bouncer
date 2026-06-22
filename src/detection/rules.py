@@ -10,6 +10,8 @@ class DetectionThresholds:
     destination_count: int = 50
     port_count: int = 30
     connection_count: int = 100
+    short_duration_threshold: float = 0.1
+    high_rate_threshold: float = 100.0
 
 
 def detect_suspicious_activity(
@@ -77,6 +79,32 @@ def _score_row(row: dict, thresholds: DetectionThresholds) -> tuple[int, list[st
     if state_ttl_count >= 5:
         score += 8
         reasons.append(f"Unusual state/TTL pattern count: {state_ttl_count:g}")
+
+    # --- Time-window scoring ---
+    dur = _number(row.get("dur", row.get("mean_duration")))
+    rate = _number(row.get("rate", row.get("connections_per_second", row.get("mean_rate"))))
+    is_short = _number(row.get("is_short_duration", 0))
+    pct_short = _number(row.get("pct_short_duration", 0))
+
+    # Short-duration rapid scan: very fast connection + high diversity
+    short_flag = is_short == 1 or pct_short >= 0.5 or (dur > 0 and dur < thresholds.short_duration_threshold)
+    high_diversity = dst_count >= thresholds.destination_count * 0.5 or port_count >= thresholds.port_count * 0.5
+    if short_flag and high_diversity:
+        score += 15
+        if dur > 0:
+            reasons.append(f"Rapid scan: {dst_count:g} destinations in {dur:.6f}s duration")
+        elif pct_short >= 0.5:
+            reasons.append(f"Rapid scan: {pct_short:.0%} of connections under {thresholds.short_duration_threshold}s")
+        else:
+            reasons.append("Rapid scan: short-duration connections with high diversity")
+
+    # High packet rate
+    if rate >= thresholds.high_rate_threshold:
+        score += 10
+        reasons.append(f"High packet rate: {rate:,.0f} pkts/sec")
+    elif rate >= thresholds.high_rate_threshold * 0.5:
+        score += 5
+        reasons.append(f"Elevated packet rate: {rate:,.0f} pkts/sec")
 
     return min(score, 100), reasons
 

@@ -47,6 +47,33 @@ def _build_raw_host_features(df: pd.DataFrame) -> pd.DataFrame:
     else:
         features["failed_or_rejected_count"] = 0
 
+    # Time-window features for raw host aggregation
+    if "dur" in df.columns:
+        dur_agg = df.groupby("srcip")["dur"].agg(
+            mean_duration="mean", min_duration="min"
+        ).reset_index()
+        features = features.merge(dur_agg, on="srcip", how="left")
+        short_dur = (
+            df.assign(_is_short=(pd.to_numeric(df["dur"], errors="coerce").fillna(0) < 0.1))
+            .groupby("srcip")["_is_short"]
+            .mean()
+            .reset_index(name="pct_short_duration")
+        )
+        features = features.merge(short_dur, on="srcip", how="left")
+    else:
+        features["mean_duration"] = float("nan")
+        features["min_duration"] = float("nan")
+        features["pct_short_duration"] = float("nan")
+
+    if "rate" in df.columns:
+        rate_agg = df.groupby("srcip")["rate"].agg(
+            mean_rate="mean", max_rate="max"
+        ).reset_index()
+        features = features.merge(rate_agg, on="srcip", how="left")
+    else:
+        features["mean_rate"] = float("nan")
+        features["max_rate"] = float("nan")
+
     features["source_type"] = "raw_host"
     return features
 
@@ -68,5 +95,14 @@ def _build_unsw_record_features(df: pd.DataFrame) -> pd.DataFrame:
     features["state"] = df["state"] if "state" in df.columns else ""
     features["attack_cat"] = df["attack_cat"] if "attack_cat" in df.columns else ""
     features["label"] = df["label"] if "label" in df.columns else pd.NA
+
+    # Time-window features for UNSW record-level analysis
+    dur_series = pd.to_numeric(df.get("dur", pd.Series(float("nan"), index=df.index)), errors="coerce").fillna(0)
+    features["dur"] = dur_series
+    features["is_short_duration"] = (dur_series < 0.1).astype(int)
+    features["rate"] = pd.to_numeric(df.get("rate", pd.Series(0, index=df.index)), errors="coerce").fillna(0)
+    # Estimate connections-per-second from rate; guard against missing rate
+    features["connections_per_second"] = features["rate"]
+
     features["source_type"] = "unsw_record"
     return features
